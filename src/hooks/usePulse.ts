@@ -70,7 +70,7 @@ export function useAlien() {
     const res = await fetch("/api/resonate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fromUserId: user.id, pulseId, amount, txHash: payment.txHash }),
+      body: JSON.stringify({ fromUserId: user.id, pulseId, amount, txHash: payment.transactionId }),
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);

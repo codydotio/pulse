@@ -1,65 +1,93 @@
-// ============================================================
-// ALIEN JS BRIDGE — Abstraction Layer (shared pattern)
-// 🚨 HACKATHON SWAP POINT — same as Kindness Chain 🚨
-// ============================================================
+/**
+ * Alien Mini App Bridge — Real SDK Integration
+ *
+ * Uses @alien_org/bridge for communication with the Alien host app.
+ * Mock mode for dev, real mode inside Alien App WebView.
+ */
 
-import type { AlienUser } from "./types";
+import type { AlienIdentityResult, AlienPaymentResult } from "./types";
 
 const IS_MOCK = process.env.NEXT_PUBLIC_ALIEN_MODE !== "real";
 
 const MOCK_NAMES = [
-  "Aria", "Zephyr", "Juniper", "Caspian", "Lyric", "Phoenix",
-  "Indigo", "Soleil", "Orion", "Meadow", "Jasper", "Coral",
+  "Starlight", "Moonbeam", "Sunflower", "Raindrop", "Snowflake",
+  "Firefly", "Breeze", "Coral", "Willow", "Clover",
 ];
 
-export async function verifyIdentity(): Promise<{
-  success: boolean;
-  alienId: string;
-  displayName: string;
-}> {
+function randomMockName(): string {
+  return MOCK_NAMES[Math.floor(Math.random() * MOCK_NAMES.length)];
+}
+
+function simulateDelay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function verifyIdentity(): Promise<AlienIdentityResult> {
   if (IS_MOCK) {
-    await new Promise((r) => setTimeout(r, 1500));
+    await simulateDelay(1500);
     const mockId = `alien_${Date.now().toString(36)}`;
-    return {
-      success: true,
-      alienId: mockId,
-      displayName: MOCK_NAMES[Math.floor(Math.random() * MOCK_NAMES.length)],
-    };
+    return { success: true, alienId: mockId, displayName: randomMockName(), proofOfHuman: true };
   }
 
-  // 🚀 REAL ALIEN SSO — UNCOMMENT AT HACKATHON
-  // import { alienVerifyIdentity } from './alien-sso-integration';
-  // const result = await alienVerifyIdentity();
-  // return { success: result.success, alienId: result.alienId, displayName: `Human ${result.alienId.slice(0,6)}`, proofOfHuman: result.proofOfHuman };
-
-  throw new Error("Set NEXT_PUBLIC_ALIEN_MODE=mock or implement real bridge");
+  try {
+    const { isBridgeAvailable, getLaunchParams } = await import("@alien_org/bridge");
+    if (!isBridgeAvailable()) {
+      return { success: false, alienId: "", displayName: "", proofOfHuman: false };
+    }
+    const params = getLaunchParams();
+    if (!params?.authToken) {
+      return { success: false, alienId: "", displayName: "", proofOfHuman: false };
+    }
+    const payload = JSON.parse(atob(params.authToken.split(".")[1]));
+    const alienId = payload.sub;
+    return { success: true, alienId, displayName: `Human ${alienId.slice(0, 6)}`, proofOfHuman: true };
+  } catch (err) {
+    console.error("Alien bridge identity error:", err);
+    return { success: false, alienId: "", displayName: "", proofOfHuman: false };
+  }
 }
 
 export async function sendPayment(
   recipientAlienId: string,
   amount: number,
   memo: string
-): Promise<{ success: boolean; txHash: string }> {
+): Promise<AlienPaymentResult> {
   if (IS_MOCK) {
-    await new Promise((r) => setTimeout(r, 800));
-    return {
-      success: true,
-      txHash: `0x${Date.now().toString(16)}${Math.random().toString(16).slice(2, 10)}`,
-    };
+    await simulateDelay(2000);
+    return { success: true, transactionId: `tx_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}` };
   }
 
-  // 🚀 REAL ALIEN WALLET — GET API FROM HACKATHON DOCS
-  // const wallet = (window as any).AlienWallet || (window as any).alien?.wallet;
-  // const tx = await wallet.sendPayment({ to: recipientAlienId, amount, currency: 'ALIEN', memo });
-  // return { success: true, transactionId: tx.id, amount };
-
-  throw new Error("Set NEXT_PUBLIC_ALIEN_MODE=mock or implement real bridge");
+  try {
+    const { request } = await import("@alien_org/bridge");
+    const invoice = `pulse-resonate-${Date.now().toString(36)}`;
+    const response = await request(
+      "payment:request",
+      {
+        recipient: recipientAlienId,
+        amount: String(amount * 1000000),
+        token: "ALIEN",
+        network: "alien",
+        invoice,
+        item: { title: `Resonate: ${memo.slice(0, 30)}`, iconUrl: "https://pulse-app.vercel.app/icon.png", quantity: 1 },
+      },
+      "payment:response",
+      { timeout: 120000 }
+    );
+    if (response.status === "paid") {
+      return { success: true, transactionId: response.txHash || invoice };
+    }
+    return { success: false, transactionId: "" };
+  } catch (err) {
+    console.error("Alien bridge payment error:", err);
+    return { success: false, transactionId: "" };
+  }
 }
 
 export function isAlienBridgeAvailable(): boolean {
   if (typeof window === "undefined") return false;
   if (IS_MOCK) return true;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const w = window as any;
-  return !!(w.AlienBridge || w.alien || w.Alien);
+  try {
+    const w = window as any;
+    return !!(w.__ALIEN_AUTH_TOKEN__ || w.__ALIEN_BRIDGE__);
+  } catch { return false; }
 }

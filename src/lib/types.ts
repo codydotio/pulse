@@ -133,3 +133,15 @@ export interface EmotionalIntelligence {
   empathyScore: number; // community resonance level 0-100
   lastAnalysis: number;
 }
+
+export interface AlienIdentityResult {
+  success: boolean;
+  alienId: string;
+  displayName: string;
+  proofOfHuman: boolean;
+}
+
+export interface AlienPaymentResult {
+  success: boolean;
+  transactionId: string;
+}
