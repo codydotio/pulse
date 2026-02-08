@@ -58,6 +58,10 @@ export function useAlien() {
     });
     const stateData = await stateRes.json();
     if (stateData.state) setUserState(stateData.state);
+    // Signal data hooks to refetch (SSE doesn't work on Vercel serverless)
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("pulse-action"));
+    }
     return data.pulse;
   }, [user]);
 
@@ -75,6 +79,9 @@ export function useAlien() {
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     if (data.state) setUserState(data.state);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("pulse-action"));
+    }
     return data.resonance;
   }, [user]);
 
@@ -97,7 +104,7 @@ export function usePulseData() {
   useEffect(() => {
     refresh();
 
-    // SSE
+    // SSE (works locally, may not on Vercel serverless)
     const es = new EventSource("/api/events");
     es.onmessage = (event) => {
       try {
@@ -107,7 +114,19 @@ export function usePulseData() {
         }
       } catch {}
     };
-    return () => es.close();
+
+    // Listen for local action events (serverless fallback)
+    const handleAction = () => setTimeout(refresh, 500);
+    window.addEventListener("pulse-action", handleAction);
+
+    // Poll every 15s for multi-user updates
+    const poll = setInterval(refresh, 15000);
+
+    return () => {
+      es.close();
+      window.removeEventListener("pulse-action", handleAction);
+      clearInterval(poll);
+    };
   }, [refresh]);
 
   return { pulses, stats, refresh };
