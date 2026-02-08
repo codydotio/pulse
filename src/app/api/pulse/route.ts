@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
-import { createPulse, getActivePulses, getStats } from "@/lib/store";
+import { createPulse, getActivePulses, getStats, registerUser, getUser } from "@/lib/store";
 
 export async function POST(request: Request) {
   try {
-    const { userId, emoji, message, mood } = await request.json();
+    const { userId, emoji, message, mood, fromDisplayName } = await request.json();
+
+    // Auto-register user if not found (handles Vercel serverless cold starts)
+    if (!getUser(userId)) {
+      registerUser(userId, fromDisplayName || "Anonymous");
+    }
+
     const result = createPulse(userId, emoji, message, mood);
     if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
     return NextResponse.json({ pulse: result });
