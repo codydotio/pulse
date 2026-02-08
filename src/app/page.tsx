@@ -30,7 +30,7 @@ export default function Home() {
             <div className="flex items-center gap-2">
               <span className="text-xl">💫</span>
               <div>
-                <h1 className="text-base font-bold">Pulse</h1>
+                <h1 className="text-base font-bold">Mood Orbit</h1>
                 <div className="text-[10px] text-white/30 uppercase tracking-wider">Collective Emotions</div>
               </div>
             </div>

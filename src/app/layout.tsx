@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Pulse — Collective Emotions",
+  title: "Mood Orbit — Collective Emotions",
   description: "The collective heartbeat of verified humans. Share how you feel. Resonate with others. Watch the emotional galaxy form.",
 };
 

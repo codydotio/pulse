@@ -67,7 +67,7 @@ export default function OnboardingScreen({ onVerify, isVerifying, error }: Props
               💫
             </motion.div>
             <h1 className="text-3xl font-bold text-white mb-3 tracking-tight">
-              Pulse
+              Mood Orbit
             </h1>
             <p className="text-white/50 text-base leading-relaxed mb-8">
               The collective heartbeat of this room.
